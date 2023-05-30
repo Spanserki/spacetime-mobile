@@ -1,34 +1,18 @@
-import {
-  Text,
-  ImageBackground,
-  View,
-  TouchableOpacity
-} from 'react-native';
-import {
-  Roboto_400Regular,
-  Roboto_700Bold,
-  useFonts
-} from '@expo-google-fonts/roboto';
-import { StatusBar } from 'expo-status-bar';
-import { BaiJamjuree_700Bold } from '@expo-google-fonts/bai-jamjuree';
-import blurImg from './assets/luz.png'
-import BgLogo from './assets/bg-logo.svg'
-import { useAuthRequest, makeRedirectUri } from 'expo-auth-session';
-import { useEffect } from 'react';
+import { makeRedirectUri, useAuthRequest } from 'expo-auth-session';
+import { useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
-import { api } from './src/lib/api';
+import { useEffect } from 'react';
+import { Text, TouchableOpacity, View } from "react-native";
+import BgLogo from '../assets/bg-logo.svg';
+import { api } from '../src/lib/api';
 
-export default function App() {
+export default function Page() {
+  const router = useRouter();
   const discovery = {
     authorizationEndpoint: 'https://github.com/login/oauth/authorize',
     tokenEndpoint: 'https://github.com/login/oauth/access_token',
     revocationEndpoint: 'https://github.com/settings/connections/applications/7b4802abdb9c25f71dfa',
   };
-  const [hasLoadedFonts] = useFonts({
-    Roboto_400Regular,
-    Roboto_700Bold,
-    BaiJamjuree_700Bold
-  })
   const [request, response, SigInGitHub] = useAuthRequest(
     {
       clientId: 'ba39cd564b2797d340e6',
@@ -39,29 +23,25 @@ export default function App() {
     },
     discovery
   );
+  async function handleGitUbAuth(code: string) {
+    const response = await api.post('/auth', {
+      code
+    })
+    const token = response.data;
+    await SecureStore.setItemAsync('token_client_github_mobile', token)
+    router.push('/memories')
+  }
   useEffect(() => {
     if (response?.type === 'success') {
       const { code } = response.params;
-      api.post('/auth', {
-        code
-      }).then(response => {
-        const token = response.data;
-        SecureStore.setItemAsync('token_client_github_mobile', token)
-      })
+      handleGitUbAuth(code)
     }
   }, [response]);
-  if (!hasLoadedFonts) {
-    return null
-  }
   return (
-    <ImageBackground
-      source={blurImg}
-      imageStyle={{ position: 'absolute', left: '-100%' }}
+    <View
       className='
-      bg-gray-900
       flex-1
       items-center
-      relative
       px-8
       py-10
      '
@@ -134,7 +114,6 @@ export default function App() {
       >
         Developed by SS digital agency 🚀
       </Text>
-      <StatusBar style="auto" />
-    </ImageBackground>
+    </View>
   );
 }
