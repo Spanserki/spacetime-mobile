@@ -1,14 +1,55 @@
-import { View, Text, Switch, TextInput, ScrollView } from 'react-native'
+import { View, Text, Switch, TextInput, ScrollView, Image } from 'react-native'
 import BgLogo from '../assets/bg-logo.svg';
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import Icon from '@expo/vector-icons/Feather'
 import { TouchableOpacity } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState } from 'react';
+import * as ImagePicker from 'expo-image-picker';
+import * as SecureStore from 'expo-secure-store'
+import { api } from '../src/lib/api';
 
 export default function NewMemorie() {
+    const router = useRouter();
     const { bottom, top } = useSafeAreaInsets();
+    const [preview, setPreview] = useState<String | null>(null)
     const [isPublic, setIsPublic] = useState(false);
+    const [content, setContent] = useState('');
+
+    async function onOpenImagePicker() {
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            quality: 1,
+        });
+        if (result.assets[0]) {
+            setPreview(result.assets[0].uri)
+        }
+        // if (!result.canceled) {
+        //     setImage(result.assets[0].uri);
+        // }
+    }
+    async function handleCreateMemory() {
+        const token = await SecureStore.getItemAsync('token_client_github_mobile')
+        const formData = new FormData();
+        formData.append('file', {
+            uri: preview,
+            name: 'image.jpg',
+            type: 'image/jpeg'
+        } as any)
+        const isPublic = formData.get('isPublic')
+        const content = formData.get('content')
+        const { data } = await api.post('/upload', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        })
+        await api.post('/memories', {
+            coverUrl: 'url',
+            content,
+            isPublic
+        })
+        router.push('/memories')
+    }
     return (
         <ScrollView className='flex-1 px-8' contentContainerStyle={{ paddingBottom: bottom, paddingTop: top }}>
             <View className='mt-4 flex-row items-center justify-between'>
@@ -33,6 +74,7 @@ export default function NewMemorie() {
                     <Text className='font-bold text-base text-gray-200'>Tonar memória pública</Text>
                 </View>
                 <TouchableOpacity
+                    onPress={onOpenImagePicker}
                     activeOpacity={0.7}
                     className='
                     h-32 
@@ -44,21 +86,28 @@ export default function NewMemorie() {
                     border-r-gray-500 
                     bg-black/20'
                 >
-                    <View className='flex-row items-center gap-2'>
-                        <Icon name='image' color='#fff' />
-                        <Text className='font-bold text-sm text-gray-200'>
-                            Adicionar foto ou video de capa
-                        </Text>
-                    </View>
+                    {!!preview ? (
+                        <Image source={{ uri: preview }} className='w-full h-full rounded-lg object-cover' />
+                    ) : (
+                        <View className='flex-row items-center gap-2'>
+                            <Icon name='image' color='#fff' />
+                            <Text className='font-bold text-sm text-gray-200'>
+                                Adicionar foto ou video de capa
+                            </Text>
+                        </View>
+                    )}
                 </TouchableOpacity>
                 <TextInput
                     multiline
+                    value={content}
+                    onChangeText={setContent}
                     className='p-0 font-bold text-md text-gray-50'
                     placeholderTextColor='#56565a'
                     placeholder='Fique livre para adicionar fotos, vídeos e relatos sobre essa experiência que você quer lembrar para sempre.'
                 >
                 </TextInput>
                 <TouchableOpacity
+                    onPress={() => console.log('submit')}
                     activeOpacity={0.7}
                     className=' items-center rounded-full bg-green-500 px-5 py-2'
                 >
@@ -68,7 +117,7 @@ export default function NewMemorie() {
                         Salvar
                     </Text>
                 </TouchableOpacity>
-            </View>
-        </ScrollView>
+            </View >
+        </ScrollView >
     )
 }

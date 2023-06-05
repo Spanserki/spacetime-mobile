@@ -28,7 +28,7 @@ export default function Page() {
       code
     })
     const token = response.data;
-    await SecureStore.setItemAsync('token_client_github_mobile', token)
+    await SecureStore.setItemAsync('token_client_github_mobile', JSON.stringify(token))
     router.push('/memories')
   }
   useEffect(() => {
